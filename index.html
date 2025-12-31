@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICS Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6">
+    <div id="main-app-container" class="max-w-6xl mx-auto">
+        <!-- 標題區域 -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">ICS Generator</h1>
+            <p class="text-slate-600">快速產生 ICS 檔案</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+            
+            <!-- 左側：表單區域 -->
+            <div class="space-y-6">
+                <div id="events-list" class="space-y-6"></div>
+
+                <button type="button" id="add-event-btn" class="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-slate-500 font-medium hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center group">
+                    <svg class="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    新增一段活動時間
+                </button>
+
+                <!-- 全域操作 -->
+                <div class="glass-card rounded-2xl shadow-sm p-6 space-y-3">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button type="button" id="downloadBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-md flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            下載 .ics 檔案
+                        </button>
+                        <button type="button" id="previewBtn" class="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-6 border border-slate-200 rounded-xl transition duration-200">
+                            查看原始碼
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：即時預覽區域 -->
+            <div class="sticky top-8 space-y-6">
+                <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider px-2 flex items-center">
+                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                    活動預覽
+                </h2>
+                
+                <div id="preview-cards-container" class="space-y-4"></div>
+
+                <div id="previewContainer" class="hidden bg-slate-900 rounded-xl p-5 overflow-hidden">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-slate-500 uppercase font-mono">ICS Output</span>
+                        <button id="closePreview" class="text-slate-400 hover:text-white text-xs">隱藏</button>
+                    </div>
+                    <pre id="previewCode" class="text-indigo-300 text-[10px] overflow-x-auto whitespace-pre leading-normal font-mono"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none text-sm z-50">
+        <span id="toastMessage"></span>
+    </div>
+    <footer id="main-footer" class="mt-16 text-center text-slate-400 text-xs pb-8">
+        <p>© 2025 ICS Generator • Made with Gemini</p>
+    </footer>
+    <template id="event-form-template">
+        <div class="event-item glass-card rounded-2xl shadow-sm p-6 sm:p-8 relative border-2 border-transparent">
+            <button type="button" class="remove-event-btn absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+
+            <div class="space-y-4">
+                <div class="flex items-center space-x-2 text-indigo-600 font-bold mb-2">
+                    <span class="event-number">#1</span>
+                    <span class="text-sm uppercase tracking-widest">活動內容</span>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">活動名稱 <span class="text-red-500">*</span></label>
+                    <input type="text" class="summary-input w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="例如：每週進度會議">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">開始時間</label>
+                        <div class="relative flex items-center border border-slate-200 rounded-lg bg-white input-focus-group overflow-hidden">
+                            <input type="text" class="start-manual w-full px-4 py-2.5 bg-transparent border-none outline-none text-slate-900" placeholder="YYYY/MM/DD HH:mm">
+                            <div class="native-picker-wrapper border-l border-slate-100">
+                                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="datetime-local" class="start-picker native-picker-trigger">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">結束時間</label>
+                        <div class="relative flex items-center border border-slate-200 rounded-lg bg-white input-focus-group overflow-hidden">
+                            <input type="text" class="end-manual w-full px-4 py-2.5 bg-transparent border-none outline-none text-slate-900" placeholder="YYYY/MM/DD HH:mm">
+                            <div class="native-picker-wrapper border-l border-slate-100">
+                                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="datetime-local" class="end-picker native-picker-trigger">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-6 py-1">
+                    <div class="flex items-center space-x-3">
+                        <label class="switch">
+                            <input type="checkbox" class="all-day-check">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="text-sm font-medium text-slate-700">全日活動</span>
+                    </div>
+                </div>
+
+                <!-- 重複設定 -->
+                <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold text-indigo-700">重複循環設定</label>
+                        <select class="rrule-freq px-3 py-1 text-xs rounded-md border border-indigo-200 outline-none">
+                            <option value="">不重複</option>
+                            <option value="DAILY">每天</option>
+                            <option value="WEEKLY">每週</option>
+                            <option value="MONTHLY">每月</option>
+                            <option value="YEARLY">每年</option>
+                        </select>
+                    </div>
+                    <div class="rrule-until-container hidden grid grid-cols-1 gap-2">
+                        <label class="text-xs font-semibold text-slate-500">重複直到 (結束日期)</label>
+                        <input type="date" class="rrule-until w-full px-3 py-2 rounded-lg border border-indigo-100 text-sm">
+                    </div>
+                </div>
+
+                <!-- 主辦人區塊 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 caps tracking-wide uppercase">主辦人姓名</label>
+                        <input type="text" class="organizer-name-input w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="選填，例如：王小明">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 caps tracking-wide uppercase">主辦人 Email</label>
+                        <input type="email" class="organizer-email-input w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="選填，用於 MAILTO">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1 caps tracking-wide uppercase">活動地點</label>
+                    <input type="text" class="location-input w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" placeholder="例如：台北辦公室 3F">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1 caps tracking-wide uppercase">活動描述</label>
+                    <textarea class="description-input w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" rows="2" placeholder="細節內容..."></textarea>
+                </div>
+            </div>
+        </div>
+    </template>
+    <script src="script.js"></script>
+</body></html>
