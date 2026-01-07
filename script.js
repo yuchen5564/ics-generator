@@ -177,7 +177,7 @@ const eventsList = document.getElementById('events-list');
             let icsLines = [
                 'BEGIN:VCALENDAR',
                 'VERSION:2.0',
-                'PRODID:-//ICS Generator Pro//TW',
+                'PRODID:-//Google Inc//Google Calendar 70.9054//EN',
                 'CALSCALE:GREGORIAN',
                 'METHOD:PUBLISH'
             ];
