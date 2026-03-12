@@ -8,6 +8,13 @@ const eventsList = document.getElementById('events-list');
 
         let eventCount = 0;
 
+        const recurrenceUnitMap = {
+            DAILY: '天',
+            WEEKLY: '週',
+            MONTHLY: '個月',
+            YEARLY: '年'
+        };
+
         /**
          * 新增活動表單
          */
@@ -39,7 +46,20 @@ const eventsList = document.getElementById('events-list');
             const endPick = el.querySelector('.end-picker');
             const allDay = el.querySelector('.all-day-check');
             const freq = el.querySelector('.rrule-freq');
+            const intervalContainer = el.querySelector('.rrule-interval-container');
+            const intervalInput = el.querySelector('.rrule-interval');
+            const intervalUnit = el.querySelector('.rrule-interval-unit');
             const untilContainer = el.querySelector('.rrule-until-container');
+
+            const updateRecurrenceUI = () => {
+                const hasFreq = freq.value !== '';
+                intervalContainer.classList.toggle('hidden', !hasFreq);
+                untilContainer.classList.toggle('hidden', !hasFreq);
+                intervalUnit.textContent = recurrenceUnitMap[freq.value] || '次';
+                if (!intervalInput.value || Number.parseInt(intervalInput.value, 10) < 1) {
+                    intervalInput.value = 1;
+                }
+            };
 
             startPick.addEventListener('change', (e) => {
                 if (e.target.value) {
@@ -70,7 +90,15 @@ const eventsList = document.getElementById('events-list');
             });
 
             freq.addEventListener('change', () => {
-                untilContainer.classList.toggle('hidden', freq.value === '');
+                updateRecurrenceUI();
+                updateRealTimePreview();
+            });
+
+            intervalInput.addEventListener('input', () => {
+                const parsed = Number.parseInt(intervalInput.value, 10);
+                if (!Number.isFinite(parsed) || parsed < 1) {
+                    intervalInput.value = 1;
+                }
                 updateRealTimePreview();
             });
 
@@ -86,6 +114,8 @@ const eventsList = document.getElementById('events-list');
                     showToast('至少需要保留一個活動');
                 }
             };
+
+            updateRecurrenceUI();
         }
 
         function parseDate(str) {
@@ -111,6 +141,17 @@ const eventsList = document.getElementById('events-list');
             };
         }
 
+        function getRecurrenceInterval(item) {
+            const interval = Number.parseInt(item.querySelector('.rrule-interval')?.value, 10);
+            return Number.isFinite(interval) && interval > 0 ? interval : 1;
+        }
+
+        function formatRecurrenceText(freq, interval) {
+            const unit = recurrenceUnitMap[freq];
+            if (!freq || !unit) return '';
+            return interval <= 1 ? `每${unit}` : `每${interval}${unit}`;
+        }
+
         function updateRealTimePreview() {
             previewCardsContainer.innerHTML = '';
             const eventItems = document.querySelectorAll('.event-item');
@@ -124,6 +165,7 @@ const eventsList = document.getElementById('events-list');
                 const orgEmail = item.querySelector('.organizer-email-input').value;
                 const isAllDay = item.querySelector('.all-day-check').checked;
                 const freq = item.querySelector('.rrule-freq').value;
+                const interval = getRecurrenceInterval(item);
 
                 const start = parseDate(startVal);
                 const end = parseDate(endVal);
@@ -144,7 +186,8 @@ const eventsList = document.getElementById('events-list');
                     }
                 }
 
-                const freqText = freq ? `<span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[10px] font-bold uppercase">重複: ${freq}</span>` : '';
+                const recurrenceText = formatRecurrenceText(freq, interval);
+                const freqText = recurrenceText ? `<span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[10px] font-bold">重複: ${recurrenceText}</span>` : '';
 
                 let orgInfo = '';
                 if (orgName || orgEmail) {
@@ -190,6 +233,7 @@ const eventsList = document.getElementById('events-list');
                 const end = parseDate(item.querySelector('.end-manual').value);
                 const isAllDay = item.querySelector('.all-day-check').checked;
                 const freq = item.querySelector('.rrule-freq').value;
+                const interval = getRecurrenceInterval(item);
                 const until = parseDate(item.querySelector('.rrule-until').value);
                 
                 if (!summary || !start || !end) return;
@@ -210,7 +254,7 @@ const eventsList = document.getElementById('events-list');
                 }
 
                 if (freq) {
-                    let rrule = `RRULE:FREQ=${freq}`;
+                    let rrule = `RRULE:FREQ=${freq};INTERVAL=${interval}`;
                     if (until) {
                         rrule += `;UNTIL=${formatICSDate(until, true)}T235959Z`;
                     }
